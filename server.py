@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 import base64
 import logging
 import requests
+import random
 
 app = FastAPI()
 
@@ -59,6 +60,25 @@ async def get_credentials(request: MessageRequest, client_request: Request):
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@app.post("/checkimage")
+async def spoof_response(request: ImageRequest):
+    try:
+        # Generate spoof response
+        boolean_response = random.choice([True, False])
+        float_list = [random.uniform(0, 1) for _ in range(10)]
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                'ai-generated': boolean_response,
+                'predictions': float_list
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate spoof response: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate spoof response")
+
 
 @app.post("/forward_image")
 async def forward_image(request: ImageRequest):
