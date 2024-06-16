@@ -7,8 +7,9 @@ def encode_image_to_base64(image_path):
     # Open the image file
     with Image.open(image_path) as image:
         # Convert the image to a BytesIO object
+        image = image.convert('RGB')
         buffered = BytesIO()
-        image.save(buffered, format="PNG")  # You can choose the format you need (PNG, JPEG, etc.)
+        image.save(buffered, format="JPEG")  # You can choose the format you need (PNG, JPEG, etc.)
         
         # Encode the BytesIO object to a base64 string
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
@@ -16,7 +17,7 @@ def encode_image_to_base64(image_path):
     return img_str
 
 # Path to your image
-image_path = '1.png'
+image_path = 'golden.jpg'
 
 # Encode the image to base64
 encoded_image = encode_image_to_base64(image_path)
