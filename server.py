@@ -84,8 +84,7 @@ async def spoof_response(request: ImageRequest):
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
-        ip ='98.115.241.69'
-        ip = '127.0.0.1'
+        ip = '44.201.142.122'
         port = 47923
         forward_url = f"http://{ip}:{port}/validator_proxy"
         
