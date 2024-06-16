@@ -1,5 +1,5 @@
 from cryptography.hazmat.primitives import serialization
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -8,6 +8,8 @@ import base64
 import logging
 import requests
 import random
+from io import BytesIO
+from PIL import Image
 
 app = FastAPI()
 
@@ -78,6 +80,54 @@ async def spoof_response(request: ImageRequest):
     except Exception as e:
         logger.error(f"Failed to generate spoof response: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate spoof response")
+
+@app.post("/test_image")
+async def test_image(file: UploadFile = File(...)):
+    try:
+        # Read the image file
+        contents = await file.read()
+        image = Image.open(BytesIO(contents))
+        
+        # Convert the image to a base64 string
+        buffered = BytesIO()
+        image.save(buffered, format=image.format)
+        img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+        # Construct the URL for forwarding the request
+        ip = '127.0.0.1'
+        port = 47923
+        forward_url = f"http://{ip}:{port}/validator_proxy"
+        
+        # Forward the request to the last client
+        data = {"image": img_str}
+
+        public_key_bytes = public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw
+        )
+        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
+
+        data['authorization'] = encoded_public_key
+        print(forward_url)
+        response = requests.post(forward_url, json=data)
+        predictions = response.json()
+        print('validator response', predictions)
+        
+        # Ensure predictions are floats before comparison
+        predictions = [float(pred) for pred in predictions]
+
+        prediction = 1 if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else 0
+        return JSONResponse(
+            status_code=response.status_code,
+            content={
+                'miner_predictions': predictions,
+                'prediction': prediction
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to forward request: {e}")
+        raise HTTPException(status_code=500, detail="Failed to forward the request")
+
 
 
 @app.post("/forward_image")
