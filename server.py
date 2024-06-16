@@ -94,7 +94,7 @@ async def test_image(file: UploadFile = File(...)):
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         # Construct the URL for forwarding the request
-        ip = '127.0.0.1'
+        ip = '44.201.142.122'
         port = 47923
         forward_url = f"http://{ip}:{port}/validator_proxy"
         
