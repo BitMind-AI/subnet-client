@@ -102,7 +102,9 @@ async def forward_image(request: ImageRequest):
         response = requests.post(forward_url, json=data)
         predictions = response.json()
         print('validator response', predictions)
-        
+        # Ensure predictions are floats before comparison
+        predictions = [float(pred) for pred in predictions]
+
         prediction = 1 if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else 0
         return JSONResponse(
             status_code=response.status_code,
