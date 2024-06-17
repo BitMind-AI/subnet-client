@@ -81,7 +81,7 @@ async def spoof_response(request: ImageRequest):
         logger.error(f"Failed to generate spoof response: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate spoof response")
 
-@app.post("/test_image")
+@app.post("/forward_image")
 async def test_image(file: UploadFile = File(...)):
     try:
         # Read the image file
@@ -116,12 +116,12 @@ async def test_image(file: UploadFile = File(...)):
         # Ensure predictions are floats before comparison
         predictions = [float(pred) for pred in predictions]
 
-        prediction = 1 if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else 0
+        prediction = True if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else False
         return JSONResponse(
             status_code=response.status_code,
             content={
-                'miner_predictions': predictions,
-                'prediction': prediction
+                'predictions': predictions,
+                'ai-generated': prediction
             }
         )
     except Exception as e:
@@ -130,7 +130,7 @@ async def test_image(file: UploadFile = File(...)):
 
 
 
-@app.post("/forward_image")
+@app.post("/forward_image_b64")
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
@@ -155,12 +155,12 @@ async def forward_image(request: ImageRequest):
         # Ensure predictions are floats before comparison
         predictions = [float(pred) for pred in predictions]
 
-        prediction = 1 if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else 0
+        prediction = True if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else False
         return JSONResponse(
             status_code=response.status_code,
             content={
-                'miner_predictions': response.json(),
-                'prediction': prediction
+                'predictions': predictions,
+                'ai-generated': prediction
             }
         )
     except Exception as e:

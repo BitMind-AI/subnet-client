@@ -33,7 +33,7 @@ image_path = 'bittensor.jpg'
 encoded_image = encode_image_to_base64(image_path)
 
 # URL of the forward_image route
-url = 'http://54.85.203.110:47927/forward_image'
+url = 'https://subnet-client.onrender.com/forward_image'
 
 # JSON payload
 payload = {
