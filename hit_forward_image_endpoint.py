@@ -2,24 +2,13 @@ from PIL import Image
 import base64
 from io import BytesIO
 import requests
-import os
 
 def encode_image_to_base64(image_path):
     # Open the image file
     with Image.open(image_path) as image:
         # Convert the image to a BytesIO object
-        image = image.convert('RGB')
         buffered = BytesIO()
-        
-        # Determine the format based on the file extension
-        ext = os.path.splitext(image_path)[1].lower()
-        if ext in ['.jpg', '.jpeg']:
-            format = 'JPEG'
-        else:
-            format = 'PNG'
-        
-        # Save the image in the determined format
-        image.save(buffered, format=format)
+        image.save(buffered, format="JPEG")  # You can choose the format you need (PNG, JPEG, etc.)
         
         # Encode the BytesIO object to a base64 string
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
@@ -27,13 +16,13 @@ def encode_image_to_base64(image_path):
     return img_str
 
 # Path to your image
-image_path = 'bittensor.jpg'
+image_path = 'golden.jpg'
 
 # Encode the image to base64
 encoded_image = encode_image_to_base64(image_path)
 
 # URL of the forward_image route
-url = 'https://subnet-client.onrender.com/forward_image'
+url = 'http://127.0.0.1:8000/forward_image'
 
 # JSON payload
 payload = {
