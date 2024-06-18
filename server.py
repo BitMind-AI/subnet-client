@@ -1,5 +1,5 @@
 from cryptography.hazmat.primitives import serialization
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -7,11 +7,12 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 import base64
 import logging
 import requests
-import random
-from io import BytesIO
-from PIL import Image
 
 app = FastAPI()
+app_port = 8000
+
+validator_ip = '127.0.0.1'
+validator_proxy_port = 47926
 
 # Load the private key from a file
 with open("private_key.pem", "rb") as f:
@@ -20,6 +21,16 @@ with open("private_key.pem", "rb") as f:
 # Load the public key from a file
 with open("public_key.pem", "rb") as f:
     public_key = serialization.load_pem_public_key(f.read())
+
+
+def get_public_key():
+    public_key_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    )
+    encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
+    return encoded_public_key
+
 
 # Define the request body schema
 class MessageRequest(BaseModel):
@@ -44,11 +55,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors(), "body": exc.body},
     )
 
+
 @app.post("/get_credentials")
 async def get_credentials(request: MessageRequest, client_request: Request):
     try:
-        # Get the message from the request
-        message = b"This is a secure message"
+        message = b"bitmindaigeneratedimagedetectionsubnet"
         
         # Sign the message with the private key
         signature = private_key.sign(message)
@@ -63,110 +74,59 @@ async def get_credentials(request: MessageRequest, client_request: Request):
         logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@app.post("/checkimage")
-async def spoof_response(request: ImageRequest):
-    try:
-        # Generate spoof response
-        boolean_response = random.choice([True, False])
-        float_list = [random.uniform(0, 1) for _ in range(10)]
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                'ai-generated': boolean_response,
-                'predictions': float_list
-            }
-        )
-    except Exception as e:
-        logger.error(f"Failed to generate spoof response: {e}")
-        raise HTTPException(status_code=500, detail="Failed to generate spoof response")
 
-@app.post("/forward_image")
-async def test_image(file: UploadFile = File(...)):
+@app.get("/miner_performance")
+async def miner_performance():
     try:
-        # Read the image file
-        contents = await file.read()
-        image = Image.open(BytesIO(contents))
-        
-        # Convert the image to a base64 string
-        buffered = BytesIO()
-        image.save(buffered, format=image.format)
-        img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-
         # Construct the URL for forwarding the request
-        ip = '44.201.142.122'
-        port = 47923
-        forward_url = f"http://{ip}:{port}/validator_proxy"
-        
-        # Forward the request to the last client
-        data = {"image": img_str}
-
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
-        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
-
-        data['authorization'] = encoded_public_key
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/miner_performance"
         print(forward_url)
-        response = requests.post(forward_url, json=data)
+
+        # Forward the request to the last client
+        data = {}
+        data['authorization'] = get_public_key()
+
+        response = requests.get(forward_url, json=data)
         predictions = response.json()
         print('validator response', predictions)
-        
-        # Ensure predictions are floats before comparison
-        predictions = [float(pred) for pred in predictions]
 
-        prediction = True if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else False
         return JSONResponse(
             status_code=response.status_code,
-            content={
-                'predictions': predictions,
-                'ai-generated': prediction
-            }
+            content=response.json()
         )
     except Exception as e:
         logger.error(f"Failed to forward request: {e}")
         raise HTTPException(status_code=500, detail="Failed to forward the request")
 
 
-
-@app.post("/forward_image_b64")
+@app.post("/forward_image")
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
-        ip = '44.201.142.122'
-        port = 47923
-        forward_url = f"http://{ip}:{port}/validator_proxy"
-        
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/validator_proxy"
+        print(forward_url)
+
         # Forward the request to the last client
         data = request.dict()
+        data['authorization'] = get_public_key()
 
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
-        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
-
-        data['authorization'] = encoded_public_key
-        print(forward_url)
         response = requests.post(forward_url, json=data)
         predictions = response.json()
         print('validator response', predictions)
-        # Ensure predictions are floats before comparison
-        predictions = [float(pred) for pred in predictions]
-
-        prediction = True if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else False
+        
+        prediction = 1 if len([p for p in predictions if p > 0.5]) >= (len(predictions) / 2) else 0
         return JSONResponse(
             status_code=response.status_code,
             content={
-                'predictions': predictions,
-                'ai-generated': prediction
+                'miner_predictions': response.json(),
+                'prediction': prediction
             }
         )
     except Exception as e:
         logger.error(f"Failed to forward request: {e}")
         raise HTTPException(status_code=500, detail="Failed to forward the request")
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=47927)
+    uvicorn.run(app, host="0.0.0.0", port=app_port)
