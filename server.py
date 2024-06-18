@@ -34,6 +34,18 @@ class ImageRequest(BaseModel):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+validator_ip = '44.201.142.122'
+validator_proxy_port = 47923
+
+
+def get_public_key():
+    public_key_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    )
+    encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
+    return encoded_public_key
+
 
 # Exception handler for request validation errors
 @app.exception_handler(RequestValidationError)
@@ -94,20 +106,11 @@ async def test_image(file: UploadFile = File(...)):
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         # Construct the URL for forwarding the request
-        ip = '44.201.142.122'
-        port = 47923
-        forward_url = f"http://{ip}:{port}/validator_proxy"
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/validator_proxy"
         
         # Forward the request to the last client
         data = {"image": img_str}
-
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
-        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
-
-        data['authorization'] = encoded_public_key
+        data['authorization'] = get_public_key()
         print(forward_url)
         response = requests.post(forward_url, json=data)
         predictions = response.json()
@@ -134,20 +137,11 @@ async def test_image(file: UploadFile = File(...)):
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
-        ip = '44.201.142.122'
-        port = 47923
-        forward_url = f"http://{ip}:{port}/validator_proxy"
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/validator_proxy"
         
         # Forward the request to the last client
         data = request.dict()
-
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
-        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
-
-        data['authorization'] = encoded_public_key
+        data['authorization'] = get_public_key()
         print(forward_url)
         response = requests.post(forward_url, json=data)
         predictions = response.json()
@@ -166,6 +160,31 @@ async def forward_image(request: ImageRequest):
     except Exception as e:
         logger.error(f"Failed to forward request: {e}")
         raise HTTPException(status_code=500, detail="Failed to forward the request")
+
+
+@app.get("/miner_performance")
+async def miner_performance():
+    try:
+        # Construct the URL for forwarding the request
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/miner_performance"
+        print(forward_url)
+
+        # Forward the request to the last client
+        data = {}
+        data['authorization'] = get_public_key()
+
+        response = requests.get(forward_url, json=data)
+        predictions = response.json()
+        print('validator response', predictions)
+
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
+    except Exception as e:
+        logger.error(f"Failed to forward request: {e}")
+        raise HTTPException(status_code=500, detail="Failed to forward the request")
+
 
 if __name__ == "__main__":
     import uvicorn
