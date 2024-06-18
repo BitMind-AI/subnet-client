@@ -1,16 +1,19 @@
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from io import BytesIO
+from PIL import Image
 import base64
 import logging
 import requests
 import random
-from io import BytesIO
-from PIL import Image
-from fastapi.middleware.cors import CORSMiddleware
+
+from gen_keys import generate_keys
+
 
 app = FastAPI()
 # Add CORS middleware
@@ -22,6 +25,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+generate_keys()
 
 # Load the private key from a file
 with open("private_key.pem", "rb") as f:
