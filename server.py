@@ -10,8 +10,17 @@ import requests
 import random
 from io import BytesIO
 from PIL import Image
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this to the domains you want to allow
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load the private key from a file
 with open("private_key.pem", "rb") as f:
